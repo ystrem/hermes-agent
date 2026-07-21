@@ -193,6 +193,13 @@ async def auth_login(request: Request, provider: str, next: str = ""):
             detail=f"Provider does not support interactive login: {provider!r}",
         )
 
+    # Password-only providers (e.g. BasicAuthProvider) don't have an OAuth
+    # redirect flow. Render the login form directly instead of calling
+    # start_login(), which would raise NotImplementedError.
+    if getattr(p, "supports_password", False):
+        from hermes_cli.dashboard_auth.login_page import render_login_html
+        return HTMLResponse(render_login_html(next_path=next))
+
     try:
         ls = p.start_login(redirect_uri=_redirect_uri(request))
     except ProviderError as e:
